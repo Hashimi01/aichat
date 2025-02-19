@@ -1,6 +1,7 @@
 "use client"
 // components/Layout/Header.js
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 
 export function Header() {
@@ -18,12 +19,12 @@ export function Header() {
               whileHover={{ scale: 1.05 }}
               className="flex items-center space-x-4 space-x-reverse"
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
-                <span className="text-blue-500 font-bold">هـ</span>
+              <div className="w-16 h-16 rounded-lg bg-blue-600/20 flex items-center justify-center ml-7">
+              <Image src="/12.png" alt="logo" width={60} height={60} />
+
               </div>
-              <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text">
-                مساعد هاشمي الآلي
-              </h1>
+             Hashimi Ai
+             
             </motion.a>
           </Link>
 

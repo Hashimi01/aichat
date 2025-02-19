@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Send, Loader2, Copy, Check, AlertTriangle, Code, Calculator, BarChart2, Hash } from 'lucide-react';
 
 export default function Chat() {
   const [messages, setMessages] = useState([]);
@@ -50,7 +50,7 @@ export default function Chat() {
           <button
             onClick={() => handleCopyMessage(index, message.content)}
             className="p-1 rounded hover:bg-gray-700/50 transition-colors"
-            title="Copy message"
+            title="نسخ الرسالة"
           >
             {copiedMessageId === index ? (
               <Check className="w-4 h-4 text-green-400" />
@@ -64,71 +64,174 @@ export default function Chat() {
     </div>
   );
 
+  const ContentBlock = ({ icon: Icon, title, children, className = "" }) => (
+    <div className={`mt-2 mb-4 rounded-lg overflow-hidden ${className}`}>
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/70 border-b border-gray-700">
+        <Icon className="w-4 h-4" />
+        <span className="text-sm font-medium">{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+
   const MessageContent = ({ content }) => {
     const parseContent = (text) => {
       const parts = [];
       let lastIndex = 0;
       
-      const combinedRegex = 
-        /```(\w+)?\n([\s\S]*?)```|<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>|🔢 Math:([\s\S]*?)(?=\n\n|$)|📊 Analysis:([\s\S]*?)(?=\n\n|$)|(https?:\/\/[^\s]+)/g;
-      
-      let match;
-      while ((match = combinedRegex.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-          parts.push({
-            type: 'text',
-            content: text.slice(lastIndex, match.index),
-          });
-        }
-        
-        if (match[0].startsWith('<a')) {
-          parts.push({
-            type: 'link',
-            url: match[3],
-            content: match[4],
-          });
-        } else if (match[0].startsWith('http')) {
-          parts.push({
-            type: 'link',
-            url: match[0],
-            content: match[0],
-          });
-        } else if (match[0].startsWith('```')) {
-          parts.push({
-            type: 'code',
-            language: match[1] || 'code',
-            content: match[2].trim(),
-          });
-        } else if (match[0].startsWith('🔢 Math:')) {
-          parts.push({
-            type: 'math',
-            content: match[5].trim(),
-          });
-        } else if (match[0].startsWith('📊 Analysis:')) {
-          parts.push({
-            type: 'analysis',
-            content: match[6].trim(),
-          });
-        }
-        
-        lastIndex = match.index + match[0].length;
-      }
+      // Enhanced regex patterns for different content types
+      const patterns = {
+        code: /```(\w+)?\n([\s\S]*?)```/g,
+        table: /\|(.+)\|\n\|[-|\s]+\|\n((?:\|.+\|\n?)+)/g,
+        heading: /^#{1,6}\s+(.+)$/gm,
+        math: /🔢\s*Math:\s*([\s\S]*?)(?=\n\n|$)/g,
+        analysis: /📊\s*Analysis:\s*([\s\S]*?)(?=\n\n|$)/g,
+        link: /<a\s+href=["']([^"']+)["'][^>]*>([^<]+)<\/a>|https?:\/\/[^\s]+/g
+      };
 
-      if (lastIndex < text.length) {
-        parts.push({
-          type: 'text',
-          content: text.slice(lastIndex),
+      // Process patterns in order
+      for (const [type, regex] of Object.entries(patterns)) {
+        text = text.replace(regex, (match, ...args) => {
+          const placeholder = `__${type}_${parts.length}__`;
+          
+          switch(type) {
+            case 'code':
+              parts.push({
+                type,
+                language: args[0] || 'plaintext',
+                content: args[1].trim()
+              });
+              break;
+            case 'table':
+              const headers = args[0].split('|').filter(Boolean).map(h => h.trim());
+              const rows = args[1].split('\n')
+                .filter(row => row.trim())
+                .map(row => row.split('|').filter(Boolean).map(cell => cell.trim()));
+              parts.push({ type, headers, rows });
+              break;
+            case 'heading':
+              const level = match.indexOf(' ') - 1;
+              parts.push({ type, level, content: args[0] });
+              break;
+            case 'math':
+            case 'analysis':
+              parts.push({ type, content: args[0].trim() });
+              break;
+            case 'link':
+              const url = args[0] || match;
+              const text = args[1] || match;
+              parts.push({ type, url, text });
+              break;
+          }
+          return placeholder;
         });
       }
 
-      return parts;
+      // Process remaining text
+      const segments = text.split(/__(\w+)_(\d+)__/);
+      const result = [];
+      
+      for (let i = 0; i < segments.length; i += 3) {
+        if (segments[i]) {
+          result.push({ type: 'text', content: segments[i] });
+        }
+        if (segments[i + 1]) {
+          result.push(parts[parseInt(segments[i + 2])]);
+        }
+      }
+
+      return result;
     };
 
     const parts = parseContent(content);
+    
     return (
       <div className="space-y-2">
         {parts.map((part, index) => {
           switch (part.type) {
+            case 'code':
+              return (
+                <ContentBlock 
+                  key={index}
+                  icon={Code}
+                  title={part.language}
+                  className="bg-gray-800/50"
+                >
+                  <div className="p-4 overflow-x-auto">
+                    <pre className="text-sm">
+                      <code>{part.content}</code>
+                    </pre>
+                  </div>
+                </ContentBlock>
+              );
+            
+            case 'table':
+              return (
+                <div key={index} className="overflow-x-auto my-4">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-800/70 border-b border-gray-700">
+                        {part.headers.map((header, i) => (
+                          <th key={i} className="px-4 py-2 text-right">{header}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {part.rows.map((row, i) => (
+                        <tr key={i} className="border-b border-gray-700/50">
+                          {row.map((cell, j) => (
+                            <td key={j} className="px-4 py-2 text-right">{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            
+            case 'heading':
+              const HeadingTag = `h${part.level}`;
+              return (
+                <ContentBlock 
+                  key={index}
+                  icon={Hash}
+                  title="عنوان"
+                  className="bg-gray-800/30"
+                >
+                  <HeadingTag className="px-4 py-2 text-lg font-semibold">
+                    {part.content}
+                  </HeadingTag>
+                </ContentBlock>
+              );
+            
+            case 'math':
+              return (
+                <ContentBlock 
+                  key={index}
+                  icon={Calculator}
+                  title="عمليات حسابية"
+                  className="bg-gray-800/30"
+                >
+                  <div className="p-4">
+                    <p className="whitespace-pre-wrap font-mono">{part.content}</p>
+                  </div>
+                </ContentBlock>
+              );
+            
+            case 'analysis':
+              return (
+                <ContentBlock 
+                  key={index}
+                  icon={BarChart2}
+                  title="تحليل"
+                  className="bg-gray-800/30"
+                >
+                  <div className="p-4">
+                    <p className="whitespace-pre-wrap">{part.content}</p>
+                  </div>
+                </ContentBlock>
+              );
+            
             case 'link':
               return (
                 <a
@@ -138,27 +241,13 @@ export default function Chat() {
                   rel="noopener noreferrer"
                   className="text-green-400 hover:text-green-300 hover:underline transition-colors"
                 >
-                  {part.content}
+                  {part.text}
                 </a>
               );
-            case 'code':
-              return (
-                <div key={index} className="relative rounded-lg bg-gray-800/50 p-4">
-                  <pre className="text-sm overflow-x-auto">
-                    <code>{part.content}</code>
-                  </pre>
-                </div>
-              );
-            case 'math':
-            case 'analysis':
-              return (
-                <div key={index} className="bg-gray-800/30 rounded-lg p-4">
-                  <p className="whitespace-pre-wrap">{part.content}</p>
-                </div>
-              );
+            
             default:
               return (
-                <p key={index} className="whitespace-pre-wrap leading-relaxed">
+                <p key={index} className="whitespace-pre-wrap leading-relaxed" dir="auto">
                   {part.content}
                 </p>
               );
@@ -200,6 +289,7 @@ export default function Chat() {
 
       const data = await response.json();
       setMessages(prev => [...prev, data.message]);
+      localStorage.setItem('chatMessages', JSON.stringify([...messages, data.message]));
     } catch (err) {
       setError(err.message);
     } finally {
