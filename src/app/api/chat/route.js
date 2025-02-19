@@ -509,25 +509,67 @@ Current question: ${sanitizedMessage}`;
       throw new Error('Empty API response');
     }
     function replaceGoogleReferences(text, lang) {
-      const googlePhrases = {
-        en: [ /trained by Google/gi, /created by Google/gi, /developed by Google/gi ],
-        ar: [ /تم تدريبي بواسطة جوجل/g, /تم إنشائي بواسطة جوجل/g, /تم تطويري بواسطة جوجل/g ],
-        fr: [ /entraîné par Google/gi, /créé par Google/gi, /développé par Google/gi ],
-        zh: [ /由Google训练/gi, /由Google创建/gi, /由Google开发/gi ],
-        es: [ /entrenado por Google/gi, /creado por Google/gi, /desarrollado por Google/gi ],
-        de: [ /von Google trainiert/gi, /von Google erstellt/gi, /von Google entwickelt/gi ],
-        ru: [ /обучен Google/gi, /создан Google/gi, /разработан Google/gi ],
-        ja: [ /Googleによって訓練された/gi, /Googleによって作成された/gi, /Googleによって開発された/gi ],
-        ko: [ /Google에 의해 훈련됨/gi, /Google에 의해 만들어짐/gi, /Google에 의해 개발됨/gi ],
-        hi: [ /Google द्वारा प्रशिक्षित/gi, /Google द्वारा बनाया गया/gi, /Google द्वारा विकसित/gi ]
-      };
-    
-      const patterns = googlePhrases[lang] || googlePhrases.en;
-      patterns.forEach(pattern => {
-        text = text.replace(pattern, 'هاشمي');
-      });
+      switch (lang) {
+        case 'en':
+          text = text.replace(/(trained by\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(created by\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(developed by\s*)Google/gi, '$1Hashimi');
+          break;
+        case 'ar':
+          text = text.replace(/(تم تدريبي بواسطة\s*)جوجل/gi, '$1شركة هاشمي');
+          text = text.replace(/(تم إنشائي بواسطة\s*)جوجل/gi, '$1شركة هاشمي');
+          text = text.replace(/(تم تطويري بواسطة\s*)جوجل/gi, '$1شركة هاشمي');
+          break;
+        case 'fr':
+          text = text.replace(/(entraîné par\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(créé par\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(développé par\s*)Google/gi, '$1Hashimi');
+          break;
+        case 'zh':
+          text = text.replace(/(由)Google(训练)/gi, '$1Hashimi$2');
+          text = text.replace(/(由)Google(创建)/gi, '$1Hashimi$2');
+          text = text.replace(/(由)Google(开发)/gi, '$1Hashimi$2');
+          break;
+        case 'es':
+          text = text.replace(/(entrenado por\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(creado por\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(desarrollado por\s*)Google/gi, '$1Hashimi');
+          break;
+        case 'de':
+          text = text.replace(/(von\s*)Google(\s*trainiert)/gi, '$1Hashimi$2');
+          text = text.replace(/(von\s*)Google(\s*erstellt)/gi, '$1Hashimi$2');
+          text = text.replace(/(von\s*)Google(\s*entwickelt)/gi, '$1Hashimi$2');
+          break;
+        case 'ru':
+          text = text.replace(/(обучен\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(создан\s*)Google/gi, '$1Hashimi');
+          text = text.replace(/(разработан\s*)Google/gi, '$1Hashimi');
+          break;
+        case 'ja':
+          text = text.replace(/(Google)(によって訓練された)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)(によって作成された)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)(によって開発された)/gi, 'Hashimi$2');
+          break;
+        case 'ko':
+          text = text.replace(/(Google)(에 의해 훈련됨)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)(에 의해 만들어짐)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)(에 의해 개발됨)/gi, 'Hashimi$2');
+          break;
+        case 'hi':
+          text = text.replace(/(Google)( द्वारा प्रशिक्षित)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)( द्वारा बनाया गया)/gi, 'Hashimi$2');
+          text = text.replace(/(Google)( द्वारा विकसित)/gi, 'Hashimi$2');
+          break;
+        default:
+          // إذا كانت اللغة غير محددة، افتراضياً نستخدم النسخة الإنجليزية
+          text = text.replace(/(trained by\s*)Google/gi, '$1Hashimi');
+          break;
+      }
       return text;
     }
+    
+    text = replaceGoogleReferences(text, detectedLang);
+
     
     return NextResponse.json({ 
       message: {
