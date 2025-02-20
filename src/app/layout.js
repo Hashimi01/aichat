@@ -1,7 +1,7 @@
 // /app/layout.js
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header, Footr } from "./hh";
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +30,7 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
+        <SpeedInsights />
         <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
           <Header />
           <main className="pt-16 min-h-screen">
