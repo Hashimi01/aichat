@@ -1,4 +1,4 @@
-import { getOtpStatus } from '../../src/lib/db';
+import { getOtpStatus } from '../../../lib/db';
 
 export default function handler(req, res) {
   if (req.method !== 'GET') {

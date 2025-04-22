@@ -1,5 +1,5 @@
-import { checkNationalId } from '../../src/lib/api';
-import { generateOtp } from '../../src/lib/db';
+import { checkNationalId } from '../../../lib/api';
+import { generateOtp } from '../../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

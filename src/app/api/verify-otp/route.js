@@ -1,4 +1,4 @@
-import { verifyOtp } from '../../src/lib/db';
+import { verifyOtp } from '../../../lib/db';
 
 export default function handler(req, res) {
   if (req.method !== 'POST') {
