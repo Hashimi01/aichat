@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import NationalIdForm from '../../../components/NationalIdForm';
+import NationalIdForm from '../../components/NationalIdForm';
 
 export default function Home() {
   const [loading, setLoading] = useState(false);

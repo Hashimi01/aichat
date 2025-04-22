@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import OtpStatus from '../../../../components/OtpStatus';
+import OtpStatus from '../../../components/OtpStatus';
 
 export default function VerifyPage({ params }) {
   const { id: nationalId } = params;
