@@ -1,21 +1,68 @@
-import { getOtpStatus } from '../../../lib/db';
+import { NextResponse } from 'next/server';
+import { getOtpStatus } from '../../../lib/otpStorage';
 
-export default function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-  
-  const { nationalId } = req.query;
-  
+export async function GET(request) {
+  // تمكين CORS
+  const origin = request.headers.get('origin');
+
+  // الحصول على معرف المستخدم من المعلمات
+  const searchParams = request.nextUrl.searchParams;
+  const nationalId = searchParams.get('nationalId');
+
   if (!nationalId) {
-    return res.status(400).json({ message: 'الرقم الوطني مطلوب' });
+    return new NextResponse(
+      JSON.stringify({ message: 'الرقم الوطني مطلوب' }),
+      { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
   }
-  
+
   try {
     const status = getOtpStatus(nationalId);
-    return res.status(200).json(status);
+    return new NextResponse(
+      JSON.stringify(status),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
   } catch (error) {
     console.error('Error checking OTP status:', error);
-    return res.status(500).json({ message: 'حدث خطأ أثناء التحقق من حالة OTP' });
+    return new NextResponse(
+      JSON.stringify({ message: 'حدث خطأ أثناء التحقق من حالة OTP' }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
   }
+}
+
+// معالجة طلبات OPTIONS (CORS preflight)
+export async function OPTIONS(request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
 } 

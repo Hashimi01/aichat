@@ -1,35 +1,101 @@
-import { checkNationalId } from '../../../lib/api';
-import { generateOtp } from '../../../lib/db';
+import { NextResponse } from 'next/server';
+import { generateOTP, getCurrentOTP } from '../../../lib/otpStorage';
+import { getUserByNationalId } from '../../../lib/api';
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-  
-  const { nationalId } = req.body;
-  
-  if (!nationalId) {
-    return res.status(400).json({ message: 'الرقم الوطني مطلوب' });
-  }
-  
+export async function POST(request) {
   try {
-    // التحقق من وجود الرقم الوطني قبل إنشاء OTP
-    const exists = await checkNationalId(nationalId);
+    const { nationalId } = await request.json();
     
-    if (!exists) {
-      return res.status(404).json({ message: 'الرقم الوطني غير موجود' });
+    // التحقق من صحة الرقم الوطني
+    if (!nationalId || typeof nationalId !== 'string') {
+      return new NextResponse(
+        JSON.stringify({ message: 'الرجاء توفير رقم وطني صالح' }),
+        { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
+      );
     }
     
-    const otpData = generateOtp(nationalId);
+    // جلب بيانات المستخدم للتحقق من وجوده
+    const user = await getUserByNationalId(nationalId);
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ message: 'لم يتم العثور على مستخدم بهذا الرقم الوطني' }),
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
+      );
+    }
     
-    // لا نرسل رمز OTP في الاستجابة للأمان، بل نرسل فقط المعلومات المتعلقة بالتوقيت
-    return res.status(200).json({
-      success: true,
-      createdAt: otpData.createdAt,
-      expiresAt: otpData.expiresAt
-    });
+    // التحقق من وجود OTP نشط أولاً
+    let otp = getCurrentOTP(nationalId);
+    
+    // إذا لم يكن هناك OTP نشط، قم بإنشاء واحد جديد
+    if (!otp) {
+      const otpData = generateOTP(nationalId);
+      otp = otpData.otp;
+    }
+    
+    // في التطبيق الحقيقي، هنا سيتم إرسال OTP عبر SMS أو البريد الإلكتروني
+    console.log(`OTP for user ${nationalId}: ${otp}`);
+    
+    // إخفاء رقم الهاتف بشكل جزئي لتعزيز الأمان
+    const maskedPhone = user.phone.replace(/(\d{3})\d+(\d{4})/, "$1*****$2");
+    
+    // إرجاع OTP في الاستجابة (هذا للاختبار فقط وغير آمن في بيئة الإنتاج)
+    return new NextResponse(
+      JSON.stringify({ 
+        message: 'تم إرسال رمز التحقق بنجاح',
+        maskedPhone: maskedPhone,
+        otp: process.env.NODE_ENV === 'development' ? otp : undefined
+      }),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
   } catch (error) {
     console.error('Error generating OTP:', error);
-    return res.status(500).json({ message: 'حدث خطأ أثناء إنشاء OTP' });
+    return new NextResponse(
+      JSON.stringify({ message: 'حدث خطأ أثناء إنشاء رمز التحقق' }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
   }
+}
+
+// معالجة طلبات OPTIONS (CORS preflight)
+export async function OPTIONS(request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
 } 

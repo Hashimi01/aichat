@@ -12,16 +12,28 @@ export default function Home() {
   const handleSubmit = async (nationalId) => {
     setLoading(true);
     setError('');
+    console.log('Submitting national ID:', nationalId);
     
     try {
       // التحقق من وجود الرقم الوطني
+      console.log('Sending request to /api/check-id');
       const checkResponse = await fetch('/api/check-id', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nationalId })
       });
       
-      const checkData = await checkResponse.json();
+      console.log('Response status:', checkResponse.status);
+      
+      // Try to parse the JSON response even if the status is not OK
+      let checkData;
+      try {
+        checkData = await checkResponse.json();
+        console.log('Response data:', checkData);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('خطأ في استقبال البيانات من الخادم');
+      }
       
       if (!checkResponse.ok) {
         throw new Error(checkData.message || 'خطأ في التحقق من الرقم الوطني');
@@ -34,6 +46,7 @@ export default function Home() {
       }
       
       // الانتقال إلى صفحة التحقق
+      console.log('Redirecting to verify page');
       router.push(`/verify/${nationalId}`);
       
     } catch (err) {

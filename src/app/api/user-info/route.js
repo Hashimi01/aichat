@@ -1,8 +1,9 @@
-// app/api/data/route.js
 import { NextResponse } from 'next/server';
+import { getOtpStatus } from '../../../lib/db';
+import { getUserByNationalId } from '../../../lib/api';
 
-export const data= [
-  
+// بيانات المستخدمين للاستخدام في التطبيق التجريبي
+const USERS_DATA = [
     {
       "nin": "6253746571416",
       "phone": "+22235734524",
@@ -633,9 +634,149 @@ export const data= [
         "photo_url": "https://example.com/photos/{nin}.jpg"
       }
     }
+  ];
+/**
+ * الحصول على معلومات المستخدم بناءً على الرقم الوطني
+ * @param {string} nin - الرقم الوطني للمستخدم
+ * @returns {Object|null} - بيانات المستخدم أو null إذا لم يتم العثور عليه
+ */
+function getUserInfo(nin) {
+  const user = USERS_DATA.find(user => user.nin === nin);
   
-] // غيّر المسار حسب مكان الملف
-
-export async function GET() {
-  return NextResponse.json(data);
+  if (!user) return null;
+  
+  // تحويل تنسيق البيانات ليتناسب مع واجهة المستخدم
+  return {
+    fullName: user.personal_info.full_name,
+    dateOfBirth: user.personal_info.date_of_birth,
+    gender: user.personal_info.gender,
+    nationality: "موريتانية",
+    address: user.personal_info.address,
+    phone: user.phone,
+    email: `${user.nin}@example.com`,
+    occupation: user.personal_info.occupation,
+    maritalStatus: user.personal_info.marital_status,
+    placeOfBirth: user.personal_info.place_of_birth,
+    photoUrl: user.personal_info.photo_url.replace('{nin}', user.nin),
+    nin: user.nin,
+    verificationStatus: 'verified'
+  };
 }
+
+/**
+ * التحقق مما إذا كان المستخدم قد أكمل التحقق باستخدام OTP
+ * @param {string} nin - الرقم الوطني للمستخدم
+ * @returns {boolean} - صحيح إذا كان المستخدم محققًا
+ */
+function isUserVerified(nin) {
+  try {
+    const otpStatus = getOtpStatus(nin);
+    return otpStatus && otpStatus.hasOtp;
+  } catch (error) {
+    console.error('خطأ في التحقق من حالة OTP:', error);
+    return false;
+  }
+}
+
+export async function GET(request) {
+  // تمكين CORS
+  const origin = request.headers.get('origin');
+  
+  // الحصول على الرقم الوطني من الاستعلام
+  const url = new URL(request.url);
+  const nationalId = url.searchParams.get('nationalId');
+  
+  if (!nationalId) {
+    return new NextResponse(
+      JSON.stringify({ 
+        success: false, 
+        error: 'يرجى توفير الرقم الوطني' 
+      }),
+      { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin || '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
+  }
+  
+  try {
+    // جلب معلومات المستخدم بواسطة الرقم الوطني
+    const user = await getUserByNationalId(nationalId);
+    
+    if (!user) {
+      return new NextResponse(
+        JSON.stringify({ 
+          success: false, 
+          error: 'لم يتم العثور على هذا المستخدم' 
+        }),
+        { 
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': origin || '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
+      );
+    }
+    
+    // عرض البيانات الأساسية للمستخدم (مع إخفاء البيانات الحساسة في التطبيق الحقيقي)
+    return new NextResponse(
+      JSON.stringify({ 
+        success: true, 
+        user: {
+          ...user,
+          // إضافة حالة التحقق للمستخدم
+          verificationStatus: 'verified'
+        } 
+      }),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin || '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+    
+    return new NextResponse(
+      JSON.stringify({ 
+        success: false, 
+        error: 'حدث خطأ أثناء جلب معلومات المستخدم' 
+      }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': origin || '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      }
+    );
+  }
+}
+
+// معالجة طلبات OPTIONS (CORS preflight)
+export async function OPTIONS(request) {
+  const origin = request.headers.get('origin');
+  
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
+} 
